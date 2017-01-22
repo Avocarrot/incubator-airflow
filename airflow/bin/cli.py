@@ -127,6 +127,16 @@ def get_dag(args):
     return dagbag.dags[args.dag_id]
 
 
+def default_config(args):
+    if os.path.isfile(args.filename):
+        if args.overwrite:
+            os.unlink(args.filename)
+        else:
+            raise AirflowException('{} already exists; pass --overwrite to '
+                                   'overwrite it'.format(args.filename))
+    conf.load_or_save_config_file(args.filename, conf.DEFAULT_CONFIG)
+
+
 def backfill(args, dag=None):
     logging.basicConfig(
         level=settings.LOGGING_LEVEL,
@@ -1146,6 +1156,14 @@ class CLIFactory(object):
         'log_file': Arg(
             ("-l", "--log-file"), "Location of the log file"),
 
+        # default_config
+        'filename': Arg(
+            ("-f", "--filename"),
+            "File to write the default config to",
+            default=conf.AIRFLOW_CONFIG),
+        'overwrite': Arg(
+            ("-o", "--overwrite"),
+            "Overwrite file if it exists", "store_true"),
         # backfill
         'mark_success': Arg(
             ("-m", "--mark_success"),
@@ -1427,6 +1445,10 @@ class CLIFactory(object):
     }
     subparsers = (
         {
+            'func': default_config,
+            'help': "Write the default config file",
+            'args': ('filename', 'overwrite'),
+        }, {
             'func': backfill,
             'help': "Run subsections of a DAG for a specified date range",
             'args': (

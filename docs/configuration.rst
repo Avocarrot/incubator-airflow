@@ -9,10 +9,12 @@ building a production-grade environment requires a bit more work!
 Setting Configuration Options
 '''''''''''''''''''''''''''''
 
-The first time you run Airflow, it will create a file called ``airflow.cfg`` in
-your ``$AIRFLOW_HOME`` directory (``~/airflow`` by default). This file contains Airflow's configuration and you
-can edit it to change any of the settings. You can also set options with environment variables by using this format:
-``$AIRFLOW__{SECTION}__{KEY}`` (note the double underscores).
+To view and change the various configuration options, run ``airflow default_config``.
+This will create a file called ``airflow.cfg`` in your ``$AIRFLOW_HOME`` directory
+(``~/airflow`` by default). This file contains Airflow's default configuration
+and you can edit it to change any of the settings. You can also set options with
+environment variables by using this format: ``$AIRFLOW__{SECTION}__{KEY}``
+(note the double underscores).
 
 For example, the
 metadata database connection string can either be set in ``airflow.cfg`` like this:

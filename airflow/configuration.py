@@ -691,10 +691,10 @@ class AirflowConfigParser(ConfigParser):
 
         return cfg
 
-    def load_or_save_config_file(self, config_file, config_string):
+    def load_or_save_config_file(self, config_file, config_string=None):
         if os.path.isfile(config_file):
             self.read(config_file)
-        else:
+        elif config_string is not None:
             logging.info("Creating new airflow config file in: %s", config_file)
             with open(config_file, 'w') as f:
                 f.write(parameterized_config(config_string))
@@ -755,7 +755,7 @@ def parameterized_config(template):
 
 conf = AirflowConfigParser()
 conf.read_parameterized_string(DEFAULT_CONFIG)
-conf.load_or_save_config_file(AIRFLOW_CONFIG, DEFAULT_CONFIG)
+conf.load_or_save_config_file(AIRFLOW_CONFIG)
 
 
 def load_test_config():
@@ -804,3 +804,7 @@ as_dict.__doc__ = conf.as_dict.__doc__
 
 def set(section, option, value):  # noqa
     return conf.set(section, option, value)
+
+
+def load_or_save_config_file(config_file, config_string):
+    return conf.load_or_save_config_file(config_file, config_string)

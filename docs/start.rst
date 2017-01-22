@@ -13,6 +13,9 @@ The installation is quick and straightforward.
     # install from pypi using pip
     pip install airflow
 
+    # Create a file with the default configuration at $AIRFLOW_HOME/airflow.cfg
+    airflow default_config
+
     # initialize the database
     airflow initdb
 
