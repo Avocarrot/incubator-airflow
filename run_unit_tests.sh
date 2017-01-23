@@ -37,7 +37,7 @@ if [ -z "$nose_args" ]; then
 --with-ignore-docstrings \
 -s \
 -v \
---logging-level=DEBUG "
+--logging-level=WARNING "
 fi
 
 #--with-doctest
