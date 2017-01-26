@@ -760,16 +760,16 @@ class SchedulerJob(BaseJob):
                 else:
                     dag.start_date = new_start
 
-            next_run_date = None
-            if not last_scheduled_run:
-                # First run
-                task_start_dates = [t.start_date for t in dag.tasks]
-                if task_start_dates:
-                    next_run_date = dag.normalize_schedule(min(task_start_dates))
-                    self.logger.debug("Next run date based on tasks {}"
-                                      .format(next_run_date))
-            else:
+            if last_scheduled_run:
                 next_run_date = dag.following_schedule(last_scheduled_run)
+            elif dag.tasks:
+                # First run
+                min_start_date = min(t.start_date for t in dag.tasks)
+                next_run_date = dag.normalize_schedule(min_start_date)
+                self.logger.debug("Next run date based on tasks {}"
+                                  .format(next_run_date))
+            else:
+                next_run_date = None
 
             # make sure backfills are also considered
             last_run = dag.get_last_dagrun(session=session)
@@ -787,31 +787,31 @@ class SchedulerJob(BaseJob):
                 self.logger.debug("Dag start date: {}. Next run date: {}"
                                   .format(dag.start_date, next_run_date))
 
+            if not next_run_date:
+                return
+
             # don't ever schedule in the future
             if next_run_date > datetime.now():
                 return
 
-            # this structure is necessary to avoid a TypeError from concatenating
-            # NoneType
-            if dag.schedule_interval == '@once':
-                period_end = next_run_date
-            elif next_run_date:
-                period_end = dag.following_schedule(next_run_date)
-
             # Don't schedule a dag beyond its end_date (as specified by the dag param)
-            if next_run_date and dag.end_date and next_run_date > dag.end_date:
+            if dag.end_date and next_run_date > dag.end_date:
                 return
 
             # Don't schedule a dag beyond its end_date (as specified by the task params)
             # Get the min task end date, which may come from the dag.default_args
-            min_task_end_date = []
-            task_end_dates = [t.end_date for t in dag.tasks if t.end_date]
-            if task_end_dates:
-                min_task_end_date = min(task_end_dates)
-            if next_run_date and min_task_end_date and next_run_date > min_task_end_date:
-                return
+            try:
+                if next_run_date > min(t.end_date for t in dag.tasks if t.end_date):
+                    return
+            except ValueError:
+                pass
 
-            if next_run_date and period_end and period_end <= datetime.now():
+            if dag.schedule_interval == '@once':
+                period_end = next_run_date
+            else:
+                period_end = dag.following_schedule(next_run_date)
+
+            if period_end and period_end <= datetime.now():
                 next_run = dag.create_dagrun(
                     run_id='scheduled__' + next_run_date.isoformat(),
                     execution_date=next_run_date,
