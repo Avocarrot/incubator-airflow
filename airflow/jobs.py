@@ -32,7 +32,6 @@ import six
 import sys
 import threading
 import time
-from time import sleep
 
 import psutil
 from sqlalchemy import Column, Integer, String, DateTime, func, Index, or_
@@ -164,15 +163,11 @@ class BaseJob(Base, LoggingMixin):
             self.kill()
 
         # Figure out how long to sleep for
-        sleep_for = 0
         if job.latest_heartbeat:
-            sleep_for = max(
-                0,
-                self.heartrate - (datetime.now() - job.latest_heartbeat).total_seconds())
-
-        # Don't keep session open while sleeping as it leaves a connection open
-        session.close()
-        sleep(sleep_for)
+            sleep_for = self.heartrate - (
+                datetime.now() - job.latest_heartbeat).total_seconds()
+            if sleep_for > 0:
+                time.sleep(sleep_for)
 
         # Update last heartbeat time
         session = settings.Session()
