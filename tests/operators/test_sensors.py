@@ -14,7 +14,6 @@
 
 
 import logging
-import os
 import sys
 import time
 import unittest
@@ -27,6 +26,8 @@ from airflow.utils.decorators import apply_defaults
 from airflow.exceptions import (AirflowException,
                                 AirflowSensorTimeout,
                                 AirflowSkipException)
+from tests.fake import FakeHDFSHook
+
 configuration.load_test_config()
 
 DEFAULT_DATE = datetime(2015, 1, 1)
@@ -118,7 +119,6 @@ class HdfsSensorTests(unittest.TestCase):
     def setUp(self):
         if sys.version_info[0] == 3:
             raise unittest.SkipTest('HdfsSensor won\'t work with python3. No need to test anything here')
-        from tests.core import FakeHDFSHook
         self.hook = FakeHDFSHook
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)

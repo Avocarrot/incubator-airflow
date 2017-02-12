@@ -15,52 +15,60 @@
 from __future__ import print_function
 
 import doctest
-import os
-import re
-import unittest
-import multiprocessing
 import mock
-from numpy.testing import assert_array_almost_equal
+import multiprocessing
+import os
+import psutil
+import re
+import signal
+import socket
+import subprocess
 import tempfile
+import unittest
+import warnings
+
 from datetime import datetime, time, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-import signal
 from time import sleep
-import warnings
 
 from dateutil.relativedelta import relativedelta
-import sqlalchemy
+from freezegun import freeze_time
+from lxml import html
+from numpy.testing import assert_array_almost_equal
+from six import StringIO
+from six.moves import cPickle as pickle
+from sqlalchemy.engine import Engine
 
 from airflow import configuration
 from airflow.executors import SequentialExecutor, LocalExecutor
 from airflow.models import Variable
-from tests.test_utils.fake_datetime import FakeDatetime
-
 configuration.load_test_config()
+
 from airflow import jobs, models, DAG, utils, macros, settings, exceptions
+from airflow.bin import cli
+from airflow.exceptions import AirflowException
 from airflow.models import BaseOperator
+
+from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.sqlite_hook import SqliteHook
+
+from airflow.operators import sensors
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.check_operator import CheckOperator, ValueCheckOperator
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.http_operator import SimpleHttpOperator
-from airflow.operators import sensors
-from airflow.hooks.base_hook import BaseHook
-from airflow.hooks.sqlite_hook import SqliteHook
-from airflow.hooks.postgres_hook import PostgresHook
-from airflow.bin import cli
-from airflow.www import app as application
-from airflow.settings import Session
+from airflow.operators.sqlite_operator import SqliteOperator
+
 from airflow.utils.state import State
 from airflow.utils.dates import infer_time_unit, round_time, scale_time_units
 from airflow.utils.logging import LoggingMixin
-from lxml import html
-from airflow.exceptions import AirflowException
-from airflow.configuration import AirflowConfigException
+from airflow.www import app as application
 
-import six
+from tests.fake import FakeSession
+
 
 NUM_EXAMPLE_DAGS = 18
 DEV_NULL = '/dev/null'
@@ -72,15 +80,8 @@ DEFAULT_DATE_DS = DEFAULT_DATE_ISO[:10]
 TEST_DAG_ID = 'unit_tests'
 
 
-try:
-    import cPickle as pickle
-except ImportError:
-    # Python 3
-    import pickle
-
-
 def reset(dag_id=TEST_DAG_ID):
-    session = Session()
+    session = settings.Session()
     tis = session.query(models.TaskInstance).filter_by(dag_id=dag_id)
     tis.delete()
     session.commit()
@@ -250,7 +251,7 @@ class CoreTest(unittest.TestCase):
 
         self.assertIsNone(additional_dag_run)
 
-    @mock.patch('airflow.jobs.datetime', FakeDatetime)
+    @freeze_time('2016-01-01')
     def test_schedule_dag_no_end_date_up_to_today_only(self):
         """
         Tests that a Dag created without an end_date can only be scheduled up
@@ -260,9 +261,6 @@ class CoreTest(unittest.TestCase):
         start_date of 2015-01-01, only jobs up to, but not including
         2016-01-01 should be scheduled.
         """
-        from datetime import datetime
-        FakeDatetime.now = classmethod(lambda cls: datetime(2016, 1, 1))
-
         session = settings.Session()
         delta = timedelta(days=1)
         start_date = DEFAULT_DATE
@@ -417,8 +415,6 @@ class CoreTest(unittest.TestCase):
         t.run(start_date=DEFAULT_DATE, end_date=DEFAULT_DATE, ignore_ti_state=True)
 
     def test_bash_operator_kill(self):
-        import subprocess
-        import psutil
         sleep_time = "100%d" % os.getpid()
         t = BashOperator(
             task_id='test_bash_operator_kill',
@@ -458,8 +454,7 @@ class CoreTest(unittest.TestCase):
         t.dry_run()
 
     def test_sqlite(self):
-        import airflow.operators.sqlite_operator
-        t = airflow.operators.sqlite_operator.SqliteOperator(
+        t = SqliteOperator(
             task_id='time_sqlite',
             sql="CREATE TABLE IF NOT EXISTS unitest (dummy VARCHAR(20))",
             dag=self.dag)
@@ -663,9 +658,8 @@ class CoreTest(unittest.TestCase):
         job = jobs.LocalTaskJob(task_instance=ti, ignore_ti_state=True)
         job.run()
 
-    @mock.patch('airflow.utils.dag_processing.datetime', FakeDatetime)
+    @freeze_time('2016-01-01')
     def test_scheduler_job(self):
-        FakeDatetime.now = classmethod(lambda cls: datetime(2016, 1, 1))
         job = jobs.SchedulerJob(dag_id='example_bash_operator',
                                 **self.default_scheduler_args)
         job.run()
@@ -764,7 +758,7 @@ class CoreTest(unittest.TestCase):
         FERNET_KEY = configuration.get("core", "FERNET_KEY")
         configuration.remove_option("core", "FERNET_KEY")
 
-        with self.assertRaises(AirflowConfigException) as cm:
+        with self.assertRaises(exceptions.AirflowConfigException) as cm:
             configuration.get("core", "FERNET_KEY")
 
         exception = str(cm.exception)
@@ -1070,8 +1064,7 @@ class CliTests(unittest.TestCase):
         cli.initdb(self.parser.parse_args(['initdb']))
 
     def test_cli_connections_list(self):
-        with mock.patch('sys.stdout',
-                        new_callable=six.StringIO) as mock_stdout:
+        with mock.patch('sys.stdout', new_callable=StringIO) as mock_stdout:
             cli.connections(self.parser.parse_args(['connections', '--list']))
             stdout = mock_stdout.getvalue()
         conns = [[x.strip("'") for x in re.findall("'\w+'", line)[:2]]
@@ -1090,8 +1083,7 @@ class CliTests(unittest.TestCase):
         self.assertIn(['postgres_default', 'postgres'], conns)
 
         # Attempt to list connections with invalid cli args
-        with mock.patch('sys.stdout',
-                        new_callable=six.StringIO) as mock_stdout:
+        with mock.patch('sys.stdout', new_callable=StringIO) as mock_stdout:
             cli.connections(self.parser.parse_args(
                 ['connections', '--list', '--conn_id=fake',
                  '--conn_uri=fake-uri']))
@@ -1107,8 +1099,7 @@ class CliTests(unittest.TestCase):
     def test_cli_connections_add_delete(self):
         # Add connections:
         uri = 'postgresql://airflow:airflow@host:5432/airflow'
-        with mock.patch('sys.stdout',
-                        new_callable=six.StringIO) as mock_stdout:
+        with mock.patch('sys.stdout', new_callable=StringIO) as mock_stdout:
             cli.connections(self.parser.parse_args(
                 ['connections', '--add', '--conn_id=new1',
                  '--conn_uri=%s' % uri]))
@@ -1137,8 +1128,7 @@ class CliTests(unittest.TestCase):
         ])
 
         # Attempt to add duplicate
-        with mock.patch('sys.stdout',
-                        new_callable=six.StringIO) as mock_stdout:
+        with mock.patch('sys.stdout', new_callable=StringIO) as mock_stdout:
             cli.connections(self.parser.parse_args(
                 ['connections', '--add', '--conn_id=new1',
                  '--conn_uri=%s' % uri]))
@@ -1151,8 +1141,7 @@ class CliTests(unittest.TestCase):
         ])
 
         # Attempt to add without providing conn_id
-        with mock.patch('sys.stdout',
-                        new_callable=six.StringIO) as mock_stdout:
+        with mock.patch('sys.stdout', new_callable=StringIO) as mock_stdout:
             cli.connections(self.parser.parse_args(
                 ['connections', '--add', '--conn_uri=%s' % uri]))
             stdout = mock_stdout.getvalue()
@@ -1165,8 +1154,7 @@ class CliTests(unittest.TestCase):
         ])
 
         # Attempt to add without providing conn_uri
-        with mock.patch('sys.stdout',
-                        new_callable=six.StringIO) as mock_stdout:
+        with mock.patch('sys.stdout', new_callable=StringIO) as mock_stdout:
             cli.connections(self.parser.parse_args(
                 ['connections', '--add', '--conn_id=new']))
             stdout = mock_stdout.getvalue()
@@ -1197,8 +1185,7 @@ class CliTests(unittest.TestCase):
                                       extra[conn_id]))
 
         # Delete connections
-        with mock.patch('sys.stdout',
-                        new_callable=six.StringIO) as mock_stdout:
+        with mock.patch('sys.stdout', new_callable=StringIO) as mock_stdout:
             cli.connections(self.parser.parse_args(
                 ['connections', '--delete', '--conn_id=new1']))
             cli.connections(self.parser.parse_args(
@@ -1228,8 +1215,7 @@ class CliTests(unittest.TestCase):
             self.assertTrue(result is None)
 
         # Attempt to delete a non-existing connnection
-        with mock.patch('sys.stdout',
-                        new_callable=six.StringIO) as mock_stdout:
+        with mock.patch('sys.stdout', new_callable=StringIO) as mock_stdout:
             cli.connections(self.parser.parse_args(
                 ['connections', '--delete', '--conn_id=fake']))
             stdout = mock_stdout.getvalue()
@@ -1241,8 +1227,7 @@ class CliTests(unittest.TestCase):
         ])
 
         # Attempt to delete with invalid cli args
-        with mock.patch('sys.stdout',
-                        new_callable=six.StringIO) as mock_stdout:
+        with mock.patch('sys.stdout', new_callable=StringIO) as mock_stdout:
             cli.connections(self.parser.parse_args(
                 ['connections', '--delete', '--conn_id=fake',
                  '--conn_uri=%s' % uri]))
@@ -1554,7 +1539,7 @@ class WebUiTests(unittest.TestCase):
         self.assertIn("Xcoms", response.data.decode('utf-8'))
 
     def test_charts(self):
-        session = Session()
+        session = settings.Session()
         chart_label = "Airflow task instance by type"
         chart = session.query(
             models.Chart).filter(models.Chart.label == chart_label).first()
@@ -1597,14 +1582,15 @@ class WebUiTests(unittest.TestCase):
 class WebPasswordAuthTest(unittest.TestCase):
     def setUp(self):
         configuration.conf.set("webserver", "authenticate", "True")
-        configuration.conf.set("webserver", "auth_backend", "airflow.contrib.auth.backends.password_auth")
+        configuration.conf.set("webserver", "auth_backend",
+                               "airflow.contrib.auth.backends.password_auth")
 
         app = application.create_app()
         app.config['TESTING'] = True
         self.app = app.test_client()
         from airflow.contrib.auth.backends.password_auth import PasswordUser
 
-        session = Session()
+        session = settings.Session()
         user = models.User()
         password_user = PasswordUser(user)
         password_user.username = 'airflow_passwordauth'
@@ -1654,7 +1640,7 @@ class WebPasswordAuthTest(unittest.TestCase):
 
     def tearDown(self):
         configuration.load_test_config()
-        session = Session()
+        session = settings.Session()
         session.query(models.User).delete()
         session.commit()
         session.close()
@@ -1664,7 +1650,8 @@ class WebPasswordAuthTest(unittest.TestCase):
 class WebLdapAuthTest(unittest.TestCase):
     def setUp(self):
         configuration.conf.set("webserver", "authenticate", "True")
-        configuration.conf.set("webserver", "auth_backend", "airflow.contrib.auth.backends.ldap_auth")
+        configuration.conf.set("webserver", "auth_backend",
+                               "airflow.contrib.auth.backends.ldap_auth")
         try:
             configuration.conf.add_section("ldap")
         except:
@@ -1738,7 +1725,7 @@ class WebLdapAuthTest(unittest.TestCase):
 
     def tearDown(self):
         configuration.load_test_config()
-        session = Session()
+        session = settings.Session()
         session.query(models.User).delete()
         session.commit()
         session.close()
@@ -1748,7 +1735,8 @@ class WebLdapAuthTest(unittest.TestCase):
 class LdapGroupTest(unittest.TestCase):
     def setUp(self):
         configuration.conf.set("webserver", "authenticate", "True")
-        configuration.conf.set("webserver", "auth_backend", "airflow.contrib.auth.backends.ldap_auth")
+        configuration.conf.set("webserver", "auth_backend",
+                               "airflow.contrib.auth.backends.ldap_auth")
         try:
             configuration.conf.add_section("ldap")
         except:
@@ -1763,12 +1751,9 @@ class LdapGroupTest(unittest.TestCase):
 
     def test_group_belonging(self):
         from airflow.contrib.auth.backends.ldap_auth import LdapUser
-        users = {"user1": ["group1", "group3"],
-                 "user2": ["group2"]
-                 }
+        users = {"user1": ["group1", "group3"], "user2": ["group2"]}
         for user in users:
-            mu = models.User(username=user,
-                             is_superuser=False)
+            mu = models.User(username=user, is_superuser=False)
             auth = LdapUser(mu)
             self.assertEqual(set(users[user]), set(auth.ldap_groups))
 
@@ -1776,19 +1761,6 @@ class LdapGroupTest(unittest.TestCase):
         configuration.load_test_config()
         configuration.conf.set("webserver", "authenticate", "False")
 
-
-class FakeSession(object):
-    def __init__(self):
-        from requests import Response
-        self.response = Response()
-        self.response.status_code = 200
-        self.response._content = 'airbnb/airflow'.encode('ascii', 'ignore')
-
-    def send(self, request, **kwargs):
-        return self.response
-
-    def prepare_request(self, request):
-        return self.response
 
 class HttpOpSensorTest(unittest.TestCase):
     def setUp(self):
@@ -1833,88 +1805,6 @@ class HttpOpSensorTest(unittest.TestCase):
             timeout=15,
             dag=self.dag)
         sensor.run(start_date=DEFAULT_DATE, end_date=DEFAULT_DATE, ignore_ti_state=True)
-
-
-class FakeWebHDFSHook(object):
-    def __init__(self, conn_id):
-        self.conn_id = conn_id
-
-    def get_conn(self):
-        return self.conn_id
-
-    def check_for_path(self, hdfs_path):
-        return hdfs_path
-
-
-class FakeSnakeBiteClientException(Exception):
-    pass
-
-
-class FakeSnakeBiteClient(object):
-
-    def __init__(self):
-        self.started = True
-
-    def ls(self, path, include_toplevel=False):
-        """
-        the fake snakebite client
-        :param path: the array of path to test
-        :param include_toplevel: to return the toplevel directory info
-        :return: a list for path for the matching queries
-        """
-        if path[0] == '/datadirectory/empty_directory' and not include_toplevel:
-            return []
-        elif path[0] == '/datadirectory/datafile':
-            return [{'group': u'supergroup', 'permission': 420, 'file_type': 'f', 'access_time': 1481122343796,
-                     'block_replication': 3, 'modification_time': 1481122343862, 'length': 0, 'blocksize': 134217728,
-                     'owner': u'hdfs', 'path': '/datadirectory/datafile'}]
-        elif path[0] == '/datadirectory/empty_directory' and include_toplevel:
-            return [
-                {'group': u'supergroup', 'permission': 493, 'file_type': 'd', 'access_time': 0, 'block_replication': 0,
-                 'modification_time': 1481132141540, 'length': 0, 'blocksize': 0, 'owner': u'hdfs',
-                 'path': '/datadirectory/empty_directory'}]
-        elif path[0] == '/datadirectory/not_empty_directory' and include_toplevel:
-            return [
-                {'group': u'supergroup', 'permission': 493, 'file_type': 'd', 'access_time': 0, 'block_replication': 0,
-                 'modification_time': 1481132141540, 'length': 0, 'blocksize': 0, 'owner': u'hdfs',
-                 'path': '/datadirectory/empty_directory'},
-                {'group': u'supergroup', 'permission': 420, 'file_type': 'f', 'access_time': 1481122343796,
-                 'block_replication': 3, 'modification_time': 1481122343862, 'length': 0, 'blocksize': 134217728,
-                 'owner': u'hdfs', 'path': '/datadirectory/not_empty_directory/test_file'}]
-        elif path[0] == '/datadirectory/not_empty_directory':
-            return [{'group': u'supergroup', 'permission': 420, 'file_type': 'f', 'access_time': 1481122343796,
-                     'block_replication': 3, 'modification_time': 1481122343862, 'length': 0, 'blocksize': 134217728,
-                     'owner': u'hdfs', 'path': '/datadirectory/not_empty_directory/test_file'}]
-        elif path[0] == '/datadirectory/not_existing_file_or_directory':
-            raise FakeSnakeBiteClientException
-        elif path[0] == '/datadirectory/regex_dir':
-            return [{'group': u'supergroup', 'permission': 420, 'file_type': 'f', 'access_time': 1481122343796,
-                     'block_replication': 3, 'modification_time': 1481122343862, 'length': 12582912, 'blocksize': 134217728,
-                     'owner': u'hdfs', 'path': '/datadirectory/regex_dir/test1file'},
-                    {'group': u'supergroup', 'permission': 420, 'file_type': 'f', 'access_time': 1481122343796,
-                     'block_replication': 3, 'modification_time': 1481122343862, 'length': 12582912, 'blocksize': 134217728,
-                     'owner': u'hdfs', 'path': '/datadirectory/regex_dir/test2file'},
-                    {'group': u'supergroup', 'permission': 420, 'file_type': 'f', 'access_time': 1481122343796,
-                     'block_replication': 3, 'modification_time': 1481122343862, 'length': 12582912, 'blocksize': 134217728,
-                     'owner': u'hdfs', 'path': '/datadirectory/regex_dir/test3file'},
-                    {'group': u'supergroup', 'permission': 420, 'file_type': 'f', 'access_time': 1481122343796,
-                     'block_replication': 3, 'modification_time': 1481122343862, 'length': 12582912, 'blocksize': 134217728,
-                     'owner': u'hdfs', 'path': '/datadirectory/regex_dir/copying_file_1.txt._COPYING_'},
-                    {'group': u'supergroup', 'permission': 420, 'file_type': 'f', 'access_time': 1481122343796,
-                     'block_replication': 3, 'modification_time': 1481122343862, 'length': 12582912, 'blocksize': 134217728,
-                     'owner': u'hdfs', 'path': '/datadirectory/regex_dir/copying_file_3.txt.sftp'}
-                    ]
-        else:
-            raise FakeSnakeBiteClientException
-
-
-class FakeHDFSHook(object):
-    def __init__(self, conn_id=None):
-        self.conn_id = conn_id
-
-    def get_conn(self):
-        client = FakeSnakeBiteClient()
-        return client
 
 
 class ConnectionTest(unittest.TestCase):
@@ -1975,7 +1865,8 @@ class ConnectionTest(unittest.TestCase):
     def test_dbapi_get_uri(self):
         conn = BaseHook.get_connection(conn_id='test_uri')
         hook = conn.get_hook()
-        self.assertEqual('postgres://username:password@ec2.compute.com:5432/the_database', hook.get_uri())
+        self.assertEqual('postgres://username:password@ec2.compute.com:5432/the_database',
+                         hook.get_uri())
         conn2 = BaseHook.get_connection(conn_id='test_uri_no_creds')
         hook2 = conn2.get_hook()
         self.assertEqual('postgres://ec2.compute.com/the_database', hook2.get_uri())
@@ -1984,8 +1875,9 @@ class ConnectionTest(unittest.TestCase):
         conn = BaseHook.get_connection(conn_id='test_uri')
         hook = conn.get_hook()
         engine = hook.get_sqlalchemy_engine()
-        self.assertIsInstance(engine, sqlalchemy.engine.Engine)
-        self.assertEqual('postgres://username:password@ec2.compute.com:5432/the_database', str(engine.url))
+        self.assertIsInstance(engine, Engine)
+        self.assertEqual('postgres://username:password@ec2.compute.com:5432/the_database',
+                         str(engine.url))
 
 
 class WebHDFSHookTest(unittest.TestCase):
@@ -2049,8 +1941,6 @@ class SSHHookTest(unittest.TestCase):
 
     def test_tunnel(self):
         print("Setting up remote listener")
-        import subprocess
-        import socket
 
         self.handle = self.hook.Popen([
             "python", "-c", '"{0}"'.format(HELLO_SERVER_CMD)
