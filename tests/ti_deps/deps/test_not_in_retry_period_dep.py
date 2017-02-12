@@ -34,7 +34,7 @@ class NotInRetryPeriodDepTest(unittest.TestCase):
             end_date=datetime(2016, 1, 1),
             is_premature=True)
 
-        self.assertFalse(NotInRetryPeriodDep().is_met(ti=ti, dep_context=None))
+        self.assertFalse(NotInRetryPeriodDep().is_met(ti=ti))
 
     def test_retry_period_finished(self):
         """
@@ -48,7 +48,7 @@ class NotInRetryPeriodDepTest(unittest.TestCase):
             end_date=datetime(2016, 1, 1),
             is_premature=False)
 
-        self.assertTrue(NotInRetryPeriodDep().is_met(ti=ti, dep_context=None))
+        self.assertTrue(NotInRetryPeriodDep().is_met(ti=ti))
 
     def test_not_in_retry_period(self):
         """
@@ -58,4 +58,4 @@ class NotInRetryPeriodDepTest(unittest.TestCase):
         task = FakeTask(dag=dag)
         ti = FakeTI(task=task, state=State.SUCCESS)
 
-        self.assertTrue(NotInRetryPeriodDep().is_met(ti=ti, dep_context=None))
+        self.assertTrue(NotInRetryPeriodDep().is_met(ti=ti))

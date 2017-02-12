@@ -33,7 +33,7 @@ class TriggerRuleDepTest(unittest.TestCase):
             task=task,
             state=State.UP_FOR_RETRY)
 
-        self.assertTrue(TriggerRuleDep().is_met(ti=ti, dep_context=None))
+        self.assertTrue(TriggerRuleDep().is_met(ti=ti))
 
     def test_dummy_tr(self):
         """
@@ -46,7 +46,7 @@ class TriggerRuleDepTest(unittest.TestCase):
             task=task,
             state=State.UP_FOR_RETRY)
 
-        self.assertTrue(TriggerRuleDep().is_met(ti=ti, dep_context=None))
+        self.assertTrue(TriggerRuleDep().is_met(ti=ti))
 
     def test_one_success_tr_success(self):
         """

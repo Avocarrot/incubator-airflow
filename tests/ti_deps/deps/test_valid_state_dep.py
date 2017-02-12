@@ -29,7 +29,7 @@ class ValidStateDepTest(unittest.TestCase):
         """
         ti = FakeTI(state=State.QUEUED, end_date=datetime(2016, 1, 1))
 
-        self.assertTrue(ValidStateDep({State.QUEUED}).is_met(ti=ti, dep_context=None))
+        self.assertTrue(ValidStateDep({State.QUEUED}).is_met(ti=ti))
 
     def test_invalid_state(self):
         """
@@ -37,7 +37,7 @@ class ValidStateDepTest(unittest.TestCase):
         """
         ti = FakeTI(state=State.SUCCESS, end_date=datetime(2016, 1, 1))
 
-        self.assertFalse(ValidStateDep({State.FAILURE}).is_met(ti=ti, dep_context=None))
+        self.assertFalse(ValidStateDep({State.FAILURE}).is_met(ti=ti))
 
     def test_no_valid_states(self):
         """
@@ -46,4 +46,4 @@ class ValidStateDepTest(unittest.TestCase):
         ti = FakeTI(state=State.SUCCESS, end_date=datetime(2016, 1, 1))
 
         with self.assertRaises(AirflowException):
-            ValidStateDep({}).is_met(ti=ti, dep_context=None)
+            ValidStateDep({}).is_met(ti=ti)

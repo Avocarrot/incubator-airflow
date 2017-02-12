@@ -27,7 +27,7 @@ class NotSkippedDepTest(unittest.TestCase):
         """
         ti = FakeTI(state=State.SKIPPED)
 
-        self.assertFalse(NotSkippedDep().is_met(ti=ti, dep_context=None))
+        self.assertFalse(NotSkippedDep().is_met(ti=ti))
 
     def test_not_skipped(self):
         """
@@ -35,4 +35,4 @@ class NotSkippedDepTest(unittest.TestCase):
         """
         ti = FakeTI(state=State.RUNNING)
 
-        self.assertTrue(NotSkippedDep().is_met(ti=ti, dep_context=None))
+        self.assertTrue(NotSkippedDep().is_met(ti=ti))

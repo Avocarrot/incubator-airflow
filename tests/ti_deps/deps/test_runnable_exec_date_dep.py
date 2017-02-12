@@ -43,7 +43,7 @@ class RunnableExecDateDepTest(unittest.TestCase):
         task = FakeTask(dag=dag, end_date=datetime(2016, 1, 2))
         ti = FakeTI(task=task, execution_date=datetime(2016, 1, 1))
 
-        self.assertFalse(RunnableExecDateDep().is_met(ti=ti, dep_context=None))
+        self.assertFalse(RunnableExecDateDep().is_met(ti=ti))
 
     @freeze_time('2016-01-03')
     def test_exec_date_after_task_end_date(self):
@@ -66,7 +66,7 @@ class RunnableExecDateDepTest(unittest.TestCase):
         task = FakeTask(dag=dag, start_date=datetime(2016, 1, 1))
         ti = FakeTI(task=task, execution_date=datetime(2016, 1, 1))
 
-        self.assertFalse(RunnableExecDateDep().is_met(ti=ti, dep_context=None))
+        self.assertFalse(RunnableExecDateDep().is_met(ti=ti))
 
     def test_exec_date_after_dag_end_date(self):
         """
@@ -77,7 +77,7 @@ class RunnableExecDateDepTest(unittest.TestCase):
         task = FakeTask(dag=dag, end_date=datetime(2016, 1, 3))
         ti = FakeTI(task=task, execution_date=datetime(2016, 1, 2))
 
-        self.assertFalse(RunnableExecDateDep().is_met(ti=ti, dep_context=None))
+        self.assertFalse(RunnableExecDateDep().is_met(ti=ti))
 
     def test_all_deps_met(self):
         """
@@ -87,4 +87,4 @@ class RunnableExecDateDepTest(unittest.TestCase):
         task = FakeTask(dag=dag, end_date=datetime(2016, 1, 2))
         ti = FakeTI(task=task, execution_date=datetime(2016, 1, 1))
 
-        self.assertTrue(RunnableExecDateDep().is_met(ti=ti, dep_context=None))
+        self.assertTrue(RunnableExecDateDep().is_met(ti=ti))

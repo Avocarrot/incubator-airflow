@@ -28,7 +28,7 @@ class NotRunningDepTest(unittest.TestCase):
         """
         ti = FakeTI(state=State.RUNNING, start_date=datetime(2016, 1, 1))
 
-        self.assertFalse(NotRunningDep().is_met(ti=ti, dep_context=None))
+        self.assertFalse(NotRunningDep().is_met(ti=ti))
 
     def test_ti_not_running(self):
         """
@@ -36,4 +36,4 @@ class NotRunningDepTest(unittest.TestCase):
         """
         ti = FakeTI(state=State.NONE, start_date=datetime(2016, 1, 1))
 
-        self.assertTrue(NotRunningDep().is_met(ti=ti, dep_context=None))
+        self.assertTrue(NotRunningDep().is_met(ti=ti))

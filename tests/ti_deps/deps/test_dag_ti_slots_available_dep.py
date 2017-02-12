@@ -28,7 +28,7 @@ class DagTISlotsAvailableDepTest(unittest.TestCase):
         task = FakeTask(dag=dag)
         ti = FakeTI(task=task, dag_id="fake_dag")
 
-        self.assertFalse(DagTISlotsAvailableDep().is_met(ti=ti, dep_context=None))
+        self.assertFalse(DagTISlotsAvailableDep().is_met(ti=ti))
 
     def test_all_conditions_met(self):
         """
@@ -38,4 +38,4 @@ class DagTISlotsAvailableDepTest(unittest.TestCase):
         task = FakeTask(dag=dag)
         ti = FakeTI(task=task, dag_id="fake_dag")
 
-        self.assertTrue(DagTISlotsAvailableDep().is_met(ti=ti, dep_context=None))
+        self.assertTrue(DagTISlotsAvailableDep().is_met(ti=ti))

@@ -28,7 +28,7 @@ class DagUnpausedDepTest(unittest.TestCase):
         task = FakeTask(dag=dag)
         ti = FakeTI(task=task, dag_id="fake_dag")
 
-        self.assertFalse(DagUnpausedDep().is_met(ti=ti, dep_context=None))
+        self.assertFalse(DagUnpausedDep().is_met(ti=ti))
 
     def test_all_conditions_met(self):
         """
@@ -38,4 +38,4 @@ class DagUnpausedDepTest(unittest.TestCase):
         task = FakeTask(dag=dag)
         ti = FakeTI(task=task, dag_id="fake_dag")
 
-        self.assertTrue(DagUnpausedDep().is_met(ti=ti, dep_context=None))
+        self.assertTrue(DagUnpausedDep().is_met(ti=ti))

@@ -28,7 +28,7 @@ class DagrunRunningDepTest(unittest.TestCase):
         task = FakeTask(dag=dag)
         ti = FakeTI(dagrun=None, task=task, dag_id="fake_dag")
 
-        self.assertFalse(DagrunRunningDep().is_met(ti=ti, dep_context=None))
+        self.assertFalse(DagrunRunningDep().is_met(ti=ti))
 
     def test_dagrun_exists(self):
         """
@@ -38,4 +38,4 @@ class DagrunRunningDepTest(unittest.TestCase):
         task = FakeTask(dag=dag)
         ti = FakeTI(dagrun="Fake Dagrun", task=task, dag_id="fake_dag")
 
-        self.assertTrue(DagrunRunningDep().is_met(ti=ti, dep_context=None))
+        self.assertTrue(DagrunRunningDep().is_met(ti=ti))
