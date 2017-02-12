@@ -13,27 +13,24 @@
 # limitations under the License.
 
 import unittest
-from datetime import datetime
+from mock import Mock
 
-from airflow.ti_deps.deps.not_running_dep import NotRunningDep
+from airflow.ti_deps.deps.not_skipped_dep import NotSkippedDep
 from airflow.utils.state import State
-from fake_models import FakeTI
 
 
-class NotRunningDepTest(unittest.TestCase):
+class NotSkippedDepTest(unittest.TestCase):
 
-    def test_ti_running(self):
+    def test_skipped(self):
         """
-        Running task instances should fail this dep
+        Skipped task instances should fail this dep
         """
-        ti = FakeTI(state=State.RUNNING, start_date=datetime(2016, 1, 1))
+        ti = Mock(state=State.SKIPPED)
+        self.assertFalse(NotSkippedDep().is_met(ti=ti))
 
-        self.assertFalse(NotRunningDep().is_met(ti=ti))
-
-    def test_ti_not_running(self):
+    def test_not_skipped(self):
         """
-        Non-running task instances should pass this dep
+        Non-skipped task instances should pass this dep
         """
-        ti = FakeTI(state=State.NONE, start_date=datetime(2016, 1, 1))
-
-        self.assertTrue(NotRunningDep().is_met(ti=ti))
+        ti = Mock(state=State.RUNNING)
+        self.assertTrue(NotSkippedDep().is_met(ti=ti))

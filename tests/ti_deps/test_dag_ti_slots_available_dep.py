@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import unittest
+from mock import Mock
 
+from airflow.models import TaskInstance
 from airflow.ti_deps.deps.dag_ti_slots_available_dep import DagTISlotsAvailableDep
-from fake_models import FakeDag, FakeTask, FakeTI
 
 
 class DagTISlotsAvailableDepTest(unittest.TestCase):
@@ -24,9 +25,9 @@ class DagTISlotsAvailableDepTest(unittest.TestCase):
         """
         Test concurrency reached should fail dep
         """
-        dag = FakeDag(concurrency=1, concurrency_reached=True)
-        task = FakeTask(dag=dag)
-        ti = FakeTI(task=task, dag_id="fake_dag")
+        dag = Mock(concurrency=1, concurrency_reached=True)
+        task = Mock(dag=dag)
+        ti = TaskInstance(task, execution_date=None)
 
         self.assertFalse(DagTISlotsAvailableDep().is_met(ti=ti))
 
@@ -34,8 +35,8 @@ class DagTISlotsAvailableDepTest(unittest.TestCase):
         """
         Test all conditions met should pass dep
         """
-        dag = FakeDag(concurrency=1, concurrency_reached=False)
-        task = FakeTask(dag=dag)
-        ti = FakeTI(task=task, dag_id="fake_dag")
+        dag = Mock(concurrency=1, concurrency_reached=False)
+        task = Mock(dag=dag)
+        ti = TaskInstance(task, execution_date=None)
 
         self.assertTrue(DagTISlotsAvailableDep().is_met(ti=ti))
