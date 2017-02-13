@@ -70,7 +70,7 @@ from airflow.www import app as application
 from tests.fake import FakeSession
 
 
-NUM_EXAMPLE_DAGS = 18
+NUM_EXAMPLE_DAGS = 17
 DEV_NULL = '/dev/null'
 TEST_DAG_FOLDER = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), 'dags')
@@ -898,7 +898,7 @@ class CoreTest(unittest.TestCase):
     def test_terminate_task(self):
         """If a task instance's db state get deleted, it should fail"""
         TI = models.TaskInstance
-        dag = self.dagbag.dags.get('test_utils')
+        dag = models.DagBag().dags.get('test_utils')
         task = dag.task_dict.get('sleeps_forever')
 
         ti = TI(task=task, execution_date=DEFAULT_DATE)
