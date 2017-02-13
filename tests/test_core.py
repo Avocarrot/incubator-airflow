@@ -658,7 +658,13 @@ class CoreTest(unittest.TestCase):
         job = jobs.LocalTaskJob(task_instance=ti, ignore_ti_state=True)
         job.run()
 
-    @freeze_time('2016-01-01')
+    # XXX: For some obscure reason, @freeze_time() causes test_scheduler_job to
+    # hang on Python 3 using LocalExecutor. So work around it by mocking and
+    # patching just the necessary datetime.now instances
+    mock_datetime = mock.Mock(side_effect=datetime,
+                              now=mock.Mock(return_value=datetime(2016, 1, 1)))
+    @mock.patch('airflow.jobs.datetime', mock_datetime)
+    @mock.patch('airflow.utils.dag_processing.datetime', mock_datetime)
     def test_scheduler_job(self):
         job = jobs.SchedulerJob(dag_id='example_bash_operator',
                                 **self.default_scheduler_args)
