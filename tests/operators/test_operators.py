@@ -17,7 +17,6 @@ from __future__ import print_function
 import datetime
 
 from airflow import DAG, configuration, operators
-from airflow.utils.tests import skipUnlessImported
 
 configuration.load_test_config()
 
@@ -29,8 +28,21 @@ DEFAULT_DATE_DS = DEFAULT_DATE_ISO[:10]
 TEST_DAG_ID = 'unit_test_dag'
 
 
+def skipUnlessImported(module, obj):
+    import importlib
+    try:
+        m = importlib.import_module(module)
+    except ImportError:
+        m = None
+    return unittest.skipUnless(
+        obj in dir(m),
+        "Skipping test because {} could not be imported from {}".format(
+            obj, module))
+
+
 @skipUnlessImported('airflow.operators.mysql_operator', 'MySqlOperator')
 class MySqlTest(unittest.TestCase):
+
     def setUp(self):
         configuration.load_test_config()
         args = {
