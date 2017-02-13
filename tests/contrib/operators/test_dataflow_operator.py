@@ -14,16 +14,9 @@
 #
 
 import unittest
+import mock
 
 from airflow.contrib.operators.dataflow_operator import DataFlowPythonOperator
-
-try:
-    from unittest import mock
-except ImportError:
-    try:
-        import mock
-    except ImportError:
-        mock = None
 
 
 TASK_ID = 'test-python-dataflow'
@@ -36,7 +29,6 @@ DEFAULT_OPTIONS = {
 ADDITIONAL_OPTIONS = {
     'output': 'gs://test/output'
 }
-GCS_HOOK_STRING = 'airflow.contrib.operators.dataflow_operator.{}'
 
 
 class DataFlowPythonOperatorTest(unittest.TestCase):
@@ -60,23 +52,25 @@ class DataFlowPythonOperatorTest(unittest.TestCase):
                          ADDITIONAL_OPTIONS)
 
     @mock.patch('airflow.contrib.operators.dataflow_operator.DataFlowHook')
-    @mock.patch(GCS_HOOK_STRING.format('GoogleCloudStorageHook'))
-    def test_exec(self, gcs_hook, dataflow_mock):
+    @mock.patch('airflow.contrib.operators.dataflow_operator.GoogleCloudStorageHook')
+    def test_exec(self, mock_gcs_hook, mock_dataflow_hook):
         """Test DataFlowHook is created and the right args are passed to
         start_python_workflow.
 
         """
-        start_python_hook = dataflow_mock.return_value.start_python_dataflow
-        gcs_download_hook = gcs_hook.return_value.download
+        mock_gcs_download = mock.Mock(return_value=42)
+        mock_gcs_hook.return_value.download = mock_gcs_download
+        mock_start_python = mock_dataflow_hook.return_value.start_python_dataflow
+
         self.dataflow.execute(None)
-        self.assertTrue(dataflow_mock.called)
+        self.assertTrue(mock_gcs_hook.called)
         expected_options = {
             'project': 'test',
             'staging_location': 'gs://test/staging',
             'output': 'gs://test/output'
         }
-        gcs_download_hook.assert_called_once_with(
-            'my-bucket', 'my-object.py', mock.ANY)
-        start_python_hook.assert_called_once_with(TASK_ID, expected_options,
+        mock_gcs_download.assert_called_once_with('my-bucket', 'my-object.py',
+                                                  mock.ANY)
+        mock_start_python.assert_called_once_with(TASK_ID, expected_options,
                                                   mock.ANY, PY_OPTIONS)
         self.assertTrue(self.dataflow.py_file.startswith('/tmp/dataflow'))

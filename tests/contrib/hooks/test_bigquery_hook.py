@@ -107,10 +107,11 @@ class TestBigQueryTableSplitter(unittest.TestCase):
 class TestBigQueryHookSourceFormat(unittest.TestCase):
     def test_invalid_source_format(self):
         with self.assertRaises(Exception) as context:
-            hook.BigQueryBaseCursor("test", "test").run_load("test.test", "test_schema.json", ["test_data.json"], source_format="json")
-
-        # since we passed 'json' in, and it's not valid, make sure it's present in the error string.
-        self.assertIn("json", str(context.exception))
+            hook.BigQueryBaseCursor("test", "test").run_load("test.test",
+                                                             ["test_schema.json"],
+                                                             ["test_data.json"],
+                                                             source_format="json")
+        self.assertIn("JSON", str(context.exception))
 
 
 class TestBigQueryBaseCursor(unittest.TestCase):

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import unittest
-from mock import patch
+from mock import Mock, patch
 
 from airflow.contrib.sensors.datadog_sensor import DatadogSensor
 
@@ -49,14 +49,17 @@ at_least_one_event = [{'alert_type': 'info',
 
 zero_events = []
 
+mock_connection = Mock(extra_dejson={'api_key': 'foo', 'app_key': 'bar'})
+patch_connection = patch('airflow.contrib.hooks.datadog_hook.DatadogHook.get_connection',
+                         return_value=mock_connection)
+
 
 class TestDatadogSensor(unittest.TestCase):
-    @patch('airflow.contrib.hooks.datadog_hook.api.Event.query')
-    @patch('airflow.contrib.sensors.datadog_sensor.api.Event.query')
-    def test_sensor_ok(self, api1, api2):
-        api1.return_value = at_least_one_event
-        api2.return_value = at_least_one_event
 
+    @patch('airflow.contrib.sensors.datadog_sensor.api.Event.query',
+           return_value=at_least_one_event)
+    @patch_connection
+    def test_sensor_ok(self, *_):
         sensor = DatadogSensor(
             task_id='test_datadog',
             datadog_conn_id='datadog_default',
@@ -69,12 +72,10 @@ class TestDatadogSensor(unittest.TestCase):
 
         self.assertTrue(sensor.poke({}))
 
-    @patch('airflow.contrib.hooks.datadog_hook.api.Event.query')
-    @patch('airflow.contrib.sensors.datadog_sensor.api.Event.query')
-    def test_sensor_fail(self, api1, api2):
-        api1.return_value = zero_events
-        api2.return_value = zero_events
-
+    @patch('airflow.contrib.sensors.datadog_sensor.api.Event.query',
+           return_value=[])
+    @patch_connection
+    def test_sensor_fail(self, *_):
         sensor = DatadogSensor(
             task_id='test_datadog',
             datadog_conn_id='datadog_default',

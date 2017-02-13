@@ -16,7 +16,7 @@ import unittest
 from airflow.utils.state import State
 from mock import Mock, patch
 
-from airflow.models import DagRun
+from airflow.models import DAG, DagRun
 from airflow.ti_deps.deps.dagrun_exists_dep import DagrunRunningDep
 
 
@@ -27,7 +27,8 @@ class DagrunRunningDepTest(unittest.TestCase):
         """
         Task instances without dagruns should fail this dep
         """
-        ti = Mock(get_dagrun=Mock(return_value=None))
+        dag = DAG('test_dag', max_active_runs=2)
+        ti = Mock(task=Mock(dag=dag), get_dagrun=Mock(return_value=None))
         self.assertFalse(DagrunRunningDep().is_met(ti=ti))
 
     def test_dagrun_exists(self):

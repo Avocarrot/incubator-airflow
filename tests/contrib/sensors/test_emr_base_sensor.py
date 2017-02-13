@@ -118,9 +118,4 @@ class TestEmrBaseSensor(unittest.TestCase):
 
             operator.poke(None)
 
-
-        self.assertTrue('EMR job failed' in context.exception)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertTrue('EMR job failed' in str(context.exception))

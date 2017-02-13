@@ -101,6 +101,8 @@ class BackfillJobTest(unittest.TestCase):
     @unittest.skipIf('sqlite' in configuration.get('core', 'sql_alchemy_conn'),
                      "concurrent access not supported in sqlite")
     def test_backfill_multi_dates(self):
+        session = settings.Session()
+        session.query(models.DagRun).delete()
         dag = self.dagbag.get_dag('example_bash_operator')
         dag.clear()
 
@@ -112,7 +114,6 @@ class BackfillJobTest(unittest.TestCase):
         )
         job.run()
 
-        session = settings.Session()
         drs = session.query(DagRun).filter(
             DagRun.dag_id=='example_bash_operator'
         ).order_by(DagRun.execution_date).all()

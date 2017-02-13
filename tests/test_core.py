@@ -800,7 +800,7 @@ class CoreTest(unittest.TestCase):
         class Blah(LoggingMixin):
             pass
 
-        self.assertEqual("tests.core.Blah", Blah().logger.name)
+        self.assertEqual("tests.test_core.Blah", Blah().logger.name)
         self.assertEqual("airflow.executors.sequential_executor.SequentialExecutor", SequentialExecutor().logger.name)
         self.assertEqual("airflow.executors.local_executor.LocalExecutor", LocalExecutor().logger.name)
 
@@ -1980,7 +1980,7 @@ class EmailTest(unittest.TestCase):
 
     @mock.patch('airflow.utils.email.send_email_smtp')
     def test_custom_backend(self, mock_send_email):
-        configuration.set('email', 'EMAIL_BACKEND', 'tests.core.send_email_test')
+        configuration.set('email', 'EMAIL_BACKEND', 'tests.test_core.send_email_test')
         utils.email.send_email('to', 'subject', 'content')
         send_email_test.assert_called_with('to', 'subject', 'content', files=None, dryrun=False, cc=None, bcc=None, mime_subtype='mixed')
         self.assertFalse(mock_send_email.called)
