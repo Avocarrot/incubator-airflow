@@ -20,6 +20,7 @@ from mock import MagicMock, patch
 from airflow import configuration
 from airflow.contrib.sensors.emr_job_flow_sensor import EmrJobFlowSensor
 
+
 DESCRIBE_CLUSTER_RUNNING_RETURN = {
     'Cluster': {
         'Applications': [
@@ -86,6 +87,7 @@ DESCRIBE_CLUSTER_TERMINATED_RETURN = {
 
 
 class TestEmrJobFlowSensor(unittest.TestCase):
+
     def setUp(self):
         configuration.load_test_config()
 
@@ -98,7 +100,6 @@ class TestEmrJobFlowSensor(unittest.TestCase):
 
         # Mock out the emr_client creator
         self.boto3_client_mock = MagicMock(return_value=self.mock_emr_client)
-
 
     def test_execute_calls_with_the_job_flow_id_until_it_reaches_a_terminal_state(self):
         with patch('boto3.client', self.boto3_client_mock):
@@ -117,7 +118,3 @@ class TestEmrJobFlowSensor(unittest.TestCase):
 
             # make sure it was called with the job_flow_id
             self.mock_emr_client.describe_cluster.assert_called_with(ClusterId='j-8989898989')
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -22,9 +22,10 @@ import logging
 import os
 import shutil
 import unittest
-import six
-import sys
 from tempfile import mkdtemp
+
+import mock
+import six
 
 from airflow import AirflowException, settings, models
 from airflow.bin import cli
@@ -36,19 +37,11 @@ from airflow.utils.db import provide_session
 from airflow.utils.state import State
 from airflow.utils.timeout import timeout
 from airflow.utils.dag_processing import SimpleDagBag
-from mock import patch
 from tests.executors.test_executor import TestExecutor
+
 
 from airflow import configuration
 configuration.load_test_config()
-
-try:
-    from unittest import mock
-except ImportError:
-    try:
-        import mock
-    except ImportError:
-        mock = None
 
 DEV_NULL = '/dev/null'
 DEFAULT_DATE = datetime.datetime(2016, 1, 1)
@@ -775,7 +768,7 @@ class SchedulerJobTest(unittest.TestCase):
             (dag.dag_id, dag_task1.task_id, DEFAULT_DATE)
         )
 
-    @patch.object(TI, 'pool_full')
+    @mock.patch.object(TI, 'pool_full')
     def test_scheduler_verify_pool_full(self, mock_pool_full):
         """
         Test task instances not queued when pool is full

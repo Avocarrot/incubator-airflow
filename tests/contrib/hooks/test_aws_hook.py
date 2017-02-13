@@ -14,24 +14,20 @@
 #
 
 import unittest
+
 import boto3
+from moto import mock_emr
 
 from airflow import configuration
 from airflow.contrib.hooks.aws_hook import AwsHook
 
 
-try:
-    from moto import mock_emr
-except ImportError:
-    mock_emr = None
-
-
 class TestAwsHook(unittest.TestCase):
+
     @mock_emr
     def setUp(self):
         configuration.load_test_config()
 
-    @unittest.skipIf(mock_emr is None, 'mock_emr package not present')
     @mock_emr
     def test_get_client_type_returns_a_boto3_client_of_the_requested_type(self):
         client = boto3.client('emr', region_name='us-east-1')
@@ -42,6 +38,3 @@ class TestAwsHook(unittest.TestCase):
         client_from_hook = hook.get_client_type('emr')
 
         self.assertEqual(client_from_hook.list_clusters()['Clusters'], [])
-
-if __name__ == '__main__':
-    unittest.main()

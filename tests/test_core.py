@@ -2088,6 +2088,3 @@ class EmailSmtpTest(unittest.TestCase):
         utils.email.send_MIME_email('from', 'to', MIMEMultipart(), dryrun=True)
         self.assertFalse(mock_smtp.called)
         self.assertFalse(mock_smtp_ssl.called)
-
-if __name__ == '__main__':
-    unittest.main()

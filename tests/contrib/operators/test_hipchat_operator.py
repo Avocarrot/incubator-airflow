@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import unittest
+
+import mock
 import requests
 
 from airflow.contrib.operators.hipchat_operator import \
@@ -20,20 +22,12 @@ from airflow.contrib.operators.hipchat_operator import \
 from airflow.exceptions import AirflowException
 from airflow import configuration
 
-try:
-    from unittest import mock
-except ImportError:
-    try:
-        import mock
-    except ImportError:
-        mock = None
-
 
 class HipChatOperatorTest(unittest.TestCase):
+
     def setUp(self):
         configuration.load_test_config()
 
-    @unittest.skipIf(mock is None, 'mock package not present')
     @mock.patch('requests.request')
     def test_execute(self, request_mock):
         resp = requests.Response()
@@ -50,7 +44,6 @@ class HipChatOperatorTest(unittest.TestCase):
 
         operator.execute(None)
 
-    @unittest.skipIf(mock is None, 'mock package not present')
     @mock.patch('requests.request')
     def test_execute_error_response(self, request_mock):
         resp = requests.Response()
@@ -68,7 +61,3 @@ class HipChatOperatorTest(unittest.TestCase):
 
         with self.assertRaises(AirflowException):
             operator.execute(None)
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -89,19 +89,18 @@ if 'AIRFLOW_RUNALL_TESTS' in os.environ:
 
         def test_get_results_with_schema(self):
             from airflow.hooks.hive_hooks import HiveServer2Hook
-            from unittest.mock import MagicMock
 
             # Configure
             sql = "select 1"
             schema = "notdefault"
             hook = HiveServer2Hook()
-            cursor_mock = MagicMock(
+            cursor_mock = mock.MagicMock(
                 __enter__=cursor_mock,
                 __exit__=None,
                 execute=None,
                 fetchall=[],
             )
-            get_conn_mock = MagicMock(
+            get_conn_mock = mock.MagicMock(
                 __enter__=get_conn_mock,
                 __exit__=None,
                 cursor=cursor_mock,

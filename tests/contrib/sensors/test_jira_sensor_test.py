@@ -23,11 +23,9 @@ from airflow.contrib.sensors.jira_sensor import JiraTicketSensor
 from airflow import models
 from airflow.utils import db
 
-DEFAULT_DATE = datetime.datetime(2017, 1, 1)
-jira_client_mock = Mock(
-        name="jira_client_for_test"
-)
 
+DEFAULT_DATE = datetime.datetime(2017, 1, 1)
+jira_client_mock = Mock(name="jira_client_for_test")
 minimal_test_ticket = {
     "id": "911539",
     "self": "https://sandbox.localhost/jira/rest/api/2/issue/911539",
@@ -43,6 +41,7 @@ minimal_test_ticket = {
 
 
 class TestJiraSensor(unittest.TestCase):
+
     def setUp(self):
         configuration.load_test_config()
         args = {
@@ -79,7 +78,3 @@ class TestJiraSensor(unittest.TestCase):
     @staticmethod
     def field_checker_func(context, issue):
         return "test-label-1" in issue['fields']['labels']
-
-
-if __name__ == '__main__':
-    unittest.main()

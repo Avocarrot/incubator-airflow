@@ -16,10 +16,10 @@ import unittest
 import datetime
 from dateutil.tz import tzlocal
 from mock import MagicMock, patch
-import boto3
 
 from airflow import configuration
 from airflow.contrib.sensors.emr_step_sensor import EmrStepSensor
+
 
 DESCRIBE_JOB_STEP_RUNNING_RETURN = {
     'ResponseMetadata': {
@@ -94,10 +94,8 @@ class TestEmrStepSensor(unittest.TestCase):
         # Mock out the emr_client creator
         self.boto3_client_mock = MagicMock(return_value=self.mock_emr_client)
 
-
     def test_execute_calls_with_the_job_flow_id_and_step_id_until_it_reaches_a_terminal_state(self):
         with patch('boto3.client', self.boto3_client_mock):
-
             operator = EmrStepSensor(
                 task_id='test_task',
                 poke_interval=1,
@@ -105,15 +103,11 @@ class TestEmrStepSensor(unittest.TestCase):
                 step_id='s-VK57YR1Z9Z5N',
                 aws_conn_id='aws_default',
             )
-
             operator.execute(None)
 
             # make sure we called twice
             self.assertEqual(self.mock_emr_client.describe_step.call_count, 2)
 
             # make sure it was called with the job_flow_id and step_id
-            self.mock_emr_client.describe_step.assert_called_with(ClusterId='j-8989898989', StepId='s-VK57YR1Z9Z5N')
-
-
-if __name__ == '__main__':
-    unittest.main()
+            self.mock_emr_client.describe_step.assert_called_with(ClusterId='j-8989898989',
+                                                                  StepId='s-VK57YR1Z9Z5N')

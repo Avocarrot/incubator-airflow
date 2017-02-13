@@ -59,6 +59,3 @@ class FileSensorTest(unittest.TestCase):
             dag=self.dag,
         )
         task.run(start_date=DEFAULT_DATE, end_date=DEFAULT_DATE, ignore_ti_state=True)
-
-if __name__ == '__main__':
-    unittest.main()

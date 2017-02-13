@@ -19,12 +19,14 @@ from mock import MagicMock, patch
 from airflow import configuration
 from airflow.contrib.operators.emr_create_job_flow_operator import EmrCreateJobFlowOperator
 
+
 RUN_JOB_FLOW_SUCCESS_RETURN = {
     'ResponseMetadata': {
         'HTTPStatusCode': 200
     },
     'JobFlowId': 'j-8989898989'
 }
+
 
 class TestEmrCreateJobFlowOperator(unittest.TestCase):
     def setUp(self):
@@ -48,6 +50,3 @@ class TestEmrCreateJobFlowOperator(unittest.TestCase):
             )
 
             self.assertEqual(operator.execute(None), 'j-8989898989')
-
-if __name__ == '__main__':
-    unittest.main()

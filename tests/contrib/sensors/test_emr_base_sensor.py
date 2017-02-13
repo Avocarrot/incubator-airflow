@@ -20,6 +20,7 @@ from airflow.contrib.sensors.emr_base_sensor import EmrBaseSensor
 
 
 class TestEmrBaseSensor(unittest.TestCase):
+
     def setUp(self):
         configuration.load_test_config()
 
@@ -92,7 +93,6 @@ class TestEmrBaseSensor(unittest.TestCase):
 
         self.assertEqual(operator.poke(None), False)
 
-
     def test_poke_raises_error_when_job_has_failed(self):
         class EmrBaseSensorSubclass(EmrBaseSensor):
             NON_TERMINAL_STATES = ['PENDING', 'RUNNING', 'CONTINUE']
@@ -115,7 +115,6 @@ class TestEmrBaseSensor(unittest.TestCase):
         )
 
         with self.assertRaises(AirflowException) as context:
-
             operator.poke(None)
 
         self.assertTrue('EMR job failed' in str(context.exception))

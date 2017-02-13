@@ -104,6 +104,7 @@ class TestBigQueryTableSplitter(unittest.TestCase):
         self.assertIn('Format exception for var_x:',
                       str(context.exception), "")
 
+
 class TestBigQueryHookSourceFormat(unittest.TestCase):
     def test_invalid_source_format(self):
         with self.assertRaises(Exception) as context:
@@ -135,6 +136,3 @@ class TestBigQueryBaseCursor(unittest.TestCase):
                 write_disposition='WRITE_EMPTY'
             )
         self.assertIn("schema_update_options is only", str(context.exception))
-
-if __name__ == '__main__':
-    unittest.main()

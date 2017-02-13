@@ -17,17 +17,11 @@ import sys
 import unittest
 from copy import deepcopy
 
+from mock import Mock, patch
+
 from airflow import configuration
 from airflow.exceptions import AirflowException
 from airflow.contrib.operators.ecs_operator import ECSOperator
-
-try:
-    from unittest import mock
-except ImportError:
-    try:
-        import mock
-    except ImportError:
-        mock = None
 
 
 RESPONSE_WITHOUT_FAILURES = {
@@ -53,7 +47,7 @@ RESPONSE_WITHOUT_FAILURES = {
 
 class TestECSOperator(unittest.TestCase):
 
-    @mock.patch('airflow.contrib.operators.ecs_operator.AwsHook')
+    @patch('airflow.contrib.operators.ecs_operator.AwsHook')
     def setUp(self, aws_hook_mock):
         configuration.load_test_config()
 
@@ -80,8 +74,8 @@ class TestECSOperator(unittest.TestCase):
     def test_template_fields_overrides(self):
         self.assertEqual(self.ecs.template_fields, ('overrides',))
 
-    @mock.patch.object(ECSOperator, '_wait_for_task_ended')
-    @mock.patch.object(ECSOperator, '_check_success_task')
+    @patch.object(ECSOperator, '_wait_for_task_ended')
+    @patch.object(ECSOperator, '_check_success_task')
     def test_execute_without_failures(self, check_mock, wait_mock):
 
         client_mock = self.aws_hook_mock.return_value.get_client_type.return_value
@@ -120,8 +114,7 @@ class TestECSOperator(unittest.TestCase):
         )
 
     def test_wait_end_tasks(self):
-
-        client_mock = mock.Mock()
+        client_mock = Mock()
         self.ecs.arn = 'arn'
         self.ecs.client = client_mock
 
@@ -131,7 +124,7 @@ class TestECSOperator(unittest.TestCase):
         self.assertEquals(sys.maxsize, client_mock.get_waiter.return_value.config.max_attempts)
 
     def test_check_success_tasks_raises(self):
-        client_mock = mock.Mock()
+        client_mock = Mock()
         self.ecs.arn = 'arn'
         self.ecs.client = client_mock
 
@@ -144,14 +137,14 @@ class TestECSOperator(unittest.TestCase):
                 }]
             }]
         }
-        with self.assertRaises(Exception) as e:
+        with self.assertRaises(AirflowException) as e:
             self.ecs._check_success_task()
 
         self.assertIn("This task is not in success state", str(e.exception))
         client_mock.describe_tasks.assert_called_once_with(cluster='c', tasks=['arn'])
 
     def test_check_success_tasks_raises_pending(self):
-        client_mock = mock.Mock()
+        client_mock = Mock()
         self.ecs.client = client_mock
         self.ecs.arn = 'arn'
         client_mock.describe_tasks.return_value = {
@@ -168,7 +161,7 @@ class TestECSOperator(unittest.TestCase):
         client_mock.describe_tasks.assert_called_once_with(cluster='c', tasks=['arn'])
 
     def test_check_success_tasks_raises_mutliple(self):
-        client_mock = mock.Mock()
+        client_mock = Mock()
         self.ecs.client = client_mock
         self.ecs.arn = 'arn'
         client_mock.describe_tasks.return_value = {
@@ -187,7 +180,7 @@ class TestECSOperator(unittest.TestCase):
         client_mock.describe_tasks.assert_called_once_with(cluster='c', tasks=['arn'])
 
     def test_check_success_task_not_raises(self):
-        client_mock = mock.Mock()
+        client_mock = Mock()
         self.ecs.client = client_mock
         self.ecs.arn = 'arn'
         client_mock.describe_tasks.return_value = {
@@ -201,7 +194,3 @@ class TestECSOperator(unittest.TestCase):
         }
         self.ecs._check_success_task()
         client_mock.describe_tasks.assert_called_once_with(cluster='c', tasks=['arn'])
-
-
-if __name__ == '__main__':
-    unittest.main()

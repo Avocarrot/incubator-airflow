@@ -12,25 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
-try:
-    from unittest import mock
-except ImportError:
-    try:
-        import mock
-    except ImportError:
-        mock = None
-import logging
-from itertools import product
-from airflow.operators.s3_to_hive_operator import S3ToHiveTransfer
-from collections import OrderedDict
-from airflow.exceptions import AirflowException
-from tempfile import NamedTemporaryFile, mkdtemp
-import gzip
 import bz2
-import shutil
-import filecmp
 import errno
+import filecmp
+import gzip
+import itertools
+import logging
+import shutil
+import unittest
+
+from collections import OrderedDict
+from tempfile import NamedTemporaryFile, mkdtemp
+
+import mock
+
+from airflow.exceptions import AirflowException
+from airflow.operators.s3_to_hive_operator import S3ToHiveTransfer
 
 
 class S3ToHiveTransferTest(unittest.TestCase):
@@ -204,12 +201,11 @@ class S3ToHiveTransferTest(unittest.TestCase):
         self.assertTrue(self._check_file_equality(bz2_txt_nh, fn_bz2, '.bz2'),
                         msg="bz2 Compressed file not as expected")
 
-    @unittest.skipIf(mock is None, 'mock package not present')
     @mock.patch('airflow.operators.s3_to_hive_operator.HiveCliHook')
     @mock.patch('airflow.operators.s3_to_hive_operator.S3Hook')
     def test_execute(self, mock_s3hook, mock_hiveclihook):
         # Testing txt, zip, bz2 files with and without header row
-        for test in product(['.txt', '.gz', '.bz2'], [True, False]):
+        for test in itertools.product(['.txt', '.gz', '.bz2'], [True, False]):
             ext = test[0]
             has_header = test[1]
             self.kwargs['headers'] = has_header
@@ -241,7 +237,3 @@ class S3ToHiveTransferTest(unittest.TestCase):
             # Execute S3ToHiveTransfer
             s32hive = S3ToHiveTransfer(**self.kwargs)
             s32hive.execute(None)
-
-
-if __name__ == '__main__':
-    unittest.main()

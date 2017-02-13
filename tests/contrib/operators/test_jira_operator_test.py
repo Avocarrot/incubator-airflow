@@ -23,10 +23,9 @@ from airflow.contrib.operators.jira_operator import JiraOperator
 from airflow import models
 from airflow.utils import db
 
+
 DEFAULT_DATE = datetime.datetime(2017, 1, 1)
-jira_client_mock = Mock(
-        name="jira_client_for_test"
-)
+jira_client_mock = Mock(name="jira_client_for_test")
 
 minimal_test_ticket = {
     "id": "911539",
@@ -43,6 +42,7 @@ minimal_test_ticket = {
 
 
 class TestJiraOperator(unittest.TestCase):
+
     def setUp(self):
         configuration.load_test_config()
         args = {
@@ -95,7 +95,3 @@ class TestJiraOperator(unittest.TestCase):
 
         self.assertTrue(jira_mock.called)
         self.assertTrue(jira_mock.return_value.add_comment.called)
-
-
-if __name__ == '__main__':
-    unittest.main()

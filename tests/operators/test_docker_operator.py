@@ -13,26 +13,18 @@
 # limitations under the License.
 
 import unittest
+import mock
 
+from airflow.exceptions import AirflowException
 try:
     from airflow.operators.docker_operator import DockerOperator
     from docker.client import Client
 except ImportError:
     pass
 
-from airflow.exceptions import AirflowException
-
-try:
-    from unittest import mock
-except ImportError:
-    try:
-        import mock
-    except ImportError:
-        mock = None
-
 
 class DockerOperatorTestCase(unittest.TestCase):
-    @unittest.skipIf(mock is None, 'mock package not present')
+
     @mock.patch('airflow.utils.file.mkdtemp')
     @mock.patch('airflow.operators.docker_operator.Client')
     def test_execute(self, client_class_mock, mkdtemp_mock):
@@ -73,7 +65,6 @@ class DockerOperatorTestCase(unittest.TestCase):
         client_mock.pull.assert_called_with('ubuntu:latest', stream=True)
         client_mock.wait.assert_called_with('some_id')
 
-    @unittest.skipIf(mock is None, 'mock package not present')
     @mock.patch('airflow.operators.docker_operator.tls.TLSConfig')
     @mock.patch('airflow.operators.docker_operator.Client')
     def test_execute_tls(self, client_class_mock, tls_class_mock):
@@ -101,7 +92,6 @@ class DockerOperatorTestCase(unittest.TestCase):
         client_class_mock.assert_called_with(base_url='https://127.0.0.1:2376', tls=tls_mock,
                                              version=None)
 
-    @unittest.skipIf(mock is None, 'mock package not present')
     @mock.patch('airflow.operators.docker_operator.Client')
     def test_execute_container_fails(self, client_class_mock):
         client_mock = mock.Mock(spec=Client)
@@ -119,7 +109,6 @@ class DockerOperatorTestCase(unittest.TestCase):
         with self.assertRaises(AirflowException):
             operator.execute(None)
 
-    @unittest.skipIf(mock is None, 'mock package not present')
     def test_on_kill(self):
         client_mock = mock.Mock(spec=Client)
 
@@ -130,7 +119,3 @@ class DockerOperatorTestCase(unittest.TestCase):
         operator.on_kill()
 
         client_mock.stop.assert_called_with('some_id')
-
-
-if __name__ == "__main__":
-    unittest.main()
