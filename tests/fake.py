@@ -13,22 +13,6 @@
 # limitations under the License.
 
 
-import requests
-
-
-class FakeSession(object):
-    def __init__(self):
-        self.response = requests.Response()
-        self.response.status_code = 200
-        self.response._content = 'airbnb/airflow'.encode('ascii', 'ignore')
-
-    def send(self, request, **kwargs):
-        return self.response
-
-    def prepare_request(self, request):
-        return self.response
-
-
 class FakeSnakeBiteClientException(Exception):
     pass
 

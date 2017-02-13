@@ -15,7 +15,6 @@
 from __future__ import print_function
 
 import doctest
-import mock
 import multiprocessing
 import os
 import psutil
@@ -32,6 +31,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from time import sleep
 
+import mock
+import requests
 from dateutil.relativedelta import relativedelta
 from freezegun import freeze_time
 from lxml import html
@@ -66,8 +67,6 @@ from airflow.utils.state import State
 from airflow.utils.dates import infer_time_unit, round_time, scale_time_units
 from airflow.utils.logging import LoggingMixin
 from airflow.www import app as application
-
-from tests.fake import FakeSession
 
 
 NUM_EXAMPLE_DAGS = 17
@@ -1769,13 +1768,17 @@ class LdapGroupTest(unittest.TestCase):
 
 
 class HttpOpSensorTest(unittest.TestCase):
+
+    mock_session_send = mock.patch('requests.Session.send',
+                                   mock.Mock(return_value=mock.Mock(text='airbnb/airflow')))
+
     def setUp(self):
         configuration.load_test_config()
         args = {'owner': 'airflow', 'start_date': DEFAULT_DATE_ISO}
         dag = DAG(TEST_DAG_ID, default_args=args)
         self.dag = dag
 
-    @mock.patch('requests.Session', FakeSession)
+    @mock_session_send
     def test_get(self):
         t = SimpleHttpOperator(
             task_id='get_op',
@@ -1786,19 +1789,19 @@ class HttpOpSensorTest(unittest.TestCase):
             dag=self.dag)
         t.run(start_date=DEFAULT_DATE, end_date=DEFAULT_DATE, ignore_ti_state=True)
 
-    @mock.patch('requests.Session', FakeSession)
+    @mock_session_send
     def test_get_response_check(self):
         t = SimpleHttpOperator(
             task_id='get_op',
             method='GET',
             endpoint='/search',
             data={"client": "ubuntu", "q": "airflow"},
-            response_check=lambda response: ("airbnb/airflow" in response.text),
+            response_check=lambda response: "airbnb/airflow" in response.text,
             headers={},
             dag=self.dag)
         t.run(start_date=DEFAULT_DATE, end_date=DEFAULT_DATE, ignore_ti_state=True)
 
-    @mock.patch('requests.Session', FakeSession)
+    @mock_session_send
     def test_sensor(self):
         sensor = sensors.HttpSensor(
             task_id='http_sensor_check',
@@ -1806,7 +1809,7 @@ class HttpOpSensorTest(unittest.TestCase):
             endpoint='/search',
             params={"client": "ubuntu", "q": "airflow"},
             headers={},
-            response_check=lambda response: ("airbnb/airflow" in response.text),
+            response_check=lambda response: "airbnb/airflow" in response.text,
             poke_interval=5,
             timeout=15,
             dag=self.dag)
