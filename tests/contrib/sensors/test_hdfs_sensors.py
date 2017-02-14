@@ -20,14 +20,13 @@ from datetime import timedelta
 
 from airflow.contrib.sensors.hdfs_sensors import HdfsSensorFolder, HdfsSensorRegex
 from airflow.exceptions import AirflowSensorTimeout
-from tests.fake import FakeHDFSHook
+from tests.operators.test_sensors import MockHDFSHook
 
 
 class HdfsSensorFolderTests(unittest.TestCase):
+
+    @unittest.skipIf(sys.version_info[0] == 3, "HdfsSensor won't work with python3")
     def setUp(self):
-        if sys.version_info[0] == 3:
-            raise unittest.SkipTest('HdfsSensor won\'t work with python3. No need to test anything here')
-        self.hook = FakeHDFSHook
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
 
@@ -46,7 +45,7 @@ class HdfsSensorFolderTests(unittest.TestCase):
                                 timeout=1,
                                 retry_delay=timedelta(seconds=1),
                                 poke_interval=1,
-                                hook=self.hook)
+                                hook=MockHDFSHook)
 
         # When
         task.execute(None)
@@ -69,7 +68,7 @@ class HdfsSensorFolderTests(unittest.TestCase):
                                 timeout=1,
                                 retry_delay=timedelta(seconds=1),
                                 poke_interval=1,
-                                hook=self.hook)
+                                hook=MockHDFSHook)
 
         # When
         # Then
@@ -90,7 +89,7 @@ class HdfsSensorFolderTests(unittest.TestCase):
                                 timeout=1,
                                 retry_delay=timedelta(seconds=1),
                                 poke_interval=1,
-                                hook=self.hook)
+                                hook=MockHDFSHook)
 
         # When
         task.execute(None)
@@ -112,7 +111,7 @@ class HdfsSensorFolderTests(unittest.TestCase):
                                 timeout=1,
                                 retry_delay=timedelta(seconds=1),
                                 poke_interval=1,
-                                hook=self.hook)
+                                hook=MockHDFSHook)
 
         # When
         # Then
@@ -121,10 +120,9 @@ class HdfsSensorFolderTests(unittest.TestCase):
 
 
 class HdfsSensorRegexTests(unittest.TestCase):
+
+    @unittest.skipIf(sys.version_info[0] == 3, "HdfsSensor won't work with python3")
     def setUp(self):
-        if sys.version_info[0] == 3:
-            raise unittest.SkipTest('HdfsSensor won\'t work with python3. No need to test anything here')
-        self.hook = FakeHDFSHook
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
 
@@ -144,7 +142,7 @@ class HdfsSensorRegexTests(unittest.TestCase):
                                timeout=1,
                                retry_delay=timedelta(seconds=1),
                                poke_interval=1,
-                               hook=self.hook)
+                               hook=MockHDFSHook)
 
         # When
         task.execute(None)
@@ -168,7 +166,7 @@ class HdfsSensorRegexTests(unittest.TestCase):
                                timeout=1,
                                retry_delay=timedelta(seconds=1),
                                poke_interval=1,
-                               hook=self.hook)
+                               hook=MockHDFSHook)
 
         # When
         # Then
@@ -194,7 +192,7 @@ class HdfsSensorRegexTests(unittest.TestCase):
                                timeout=1,
                                retry_delay=timedelta(seconds=1),
                                poke_interval=1,
-                               hook=self.hook)
+                               hook=MockHDFSHook)
 
         # When
         task.execute(None)
@@ -219,7 +217,7 @@ class HdfsSensorRegexTests(unittest.TestCase):
                                timeout=1,
                                retry_delay=timedelta(seconds=1),
                                poke_interval=1,
-                               hook=self.hook)
+                               hook=MockHDFSHook)
 
         # When
         # Then
@@ -244,7 +242,7 @@ class HdfsSensorRegexTests(unittest.TestCase):
                                timeout=1,
                                retry_delay=timedelta(seconds=1),
                                poke_interval=1,
-                               hook=self.hook)
+                               hook=MockHDFSHook)
 
         # When
         # Then

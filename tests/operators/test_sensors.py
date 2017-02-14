@@ -17,8 +17,9 @@ import logging
 import sys
 import time
 import unittest
-
 from datetime import datetime, timedelta
+
+from mock import Mock
 
 from airflow import DAG, configuration
 from airflow.operators.sensors import HttpSensor, BaseSensorOperator, HdfsSensor
@@ -26,12 +27,150 @@ from airflow.utils.decorators import apply_defaults
 from airflow.exceptions import (AirflowException,
                                 AirflowSensorTimeout,
                                 AirflowSkipException)
-from tests.fake import FakeHDFSHook
 
 configuration.load_test_config()
 
 DEFAULT_DATE = datetime(2015, 1, 1)
 TEST_DAG_ID = 'unit_test_dag'
+
+
+def mock_ls(path, include_toplevel=False):
+    """
+    the fake snakebite client
+    :param path: the array of path to test
+    :param include_toplevel: to return the toplevel directory info
+    :return: a list for path for the matching queries
+    """
+    p = path[0]
+
+    if p == '/datadirectory/empty_directory' and not include_toplevel:
+        return []
+
+    if p == '/datadirectory/datafile':
+        return [{'group': u'supergroup',
+                 'permission': 420,
+                 'file_type': 'f',
+                 'access_time': 1481122343796,
+                 'block_replication': 3,
+                 'modification_time': 1481122343862,
+                 'length': 0,
+                 'blocksize': 134217728,
+                 'owner': u'hdfs',
+                 'path': '/datadirectory/datafile',
+                 }]
+
+    if p == '/datadirectory/empty_directory' and include_toplevel:
+        return [{'group': u'supergroup',
+                 'permission': 493,
+                 'file_type': 'd',
+                 'access_time': 0,
+                 'block_replication': 0,
+                 'modification_time': 1481132141540,
+                 'length': 0,
+                 'blocksize': 0,
+                 'owner': u'hdfs',
+                 'path': '/datadirectory/empty_directory',
+                 }]
+
+    if p == '/datadirectory/not_empty_directory' and include_toplevel:
+        return [{'group': u'supergroup',
+                 'permission': 493,
+                 'file_type': 'd',
+                 'access_time': 0,
+                 'block_replication': 0,
+                 'modification_time': 1481132141540,
+                 'length': 0,
+                 'blocksize': 0,
+                 'owner': u'hdfs',
+                 'path': '/datadirectory/empty_directory'
+                },
+                {'group': u'supergroup',
+                 'permission': 420,
+                 'file_type': 'f',
+                 'access_time': 1481122343796,
+                 'block_replication': 3,
+                 'modification_time': 1481122343862,
+                 'length': 0,
+                 'blocksize': 134217728,
+                 'owner': u'hdfs',
+                 'path': '/datadirectory/not_empty_directory/test_file',
+                 }]
+
+    if p == '/datadirectory/not_empty_directory':
+        return [{'group': u'supergroup',
+                 'permission': 420,
+                 'file_type': 'f',
+                 'access_time': 1481122343796,
+                 'block_replication': 3,
+                 'modification_time': 1481122343862,
+                 'length': 0,
+                 'blocksize': 134217728,
+                 'owner': u'hdfs',
+                 'path': '/datadirectory/not_empty_directory/test_file',
+                 }]
+
+    if p == '/datadirectory/regex_dir':
+        return [{'group': u'supergroup',
+                 'permission': 420,
+                 'file_type': 'f',
+                 'access_time': 1481122343796,
+                 'block_replication': 3,
+                 'modification_time': 1481122343862,
+                 'length': 12582912,
+                 'blocksize': 134217728,
+                 'owner': u'hdfs',
+                 'path': '/datadirectory/regex_dir/test1file'
+                },
+                {'group': u'supergroup',
+                 'permission': 420,
+                 'file_type': 'f',
+                 'access_time': 1481122343796,
+                 'block_replication': 3,
+                 'modification_time': 1481122343862,
+                 'length': 12582912,
+                 'blocksize': 134217728,
+                 'owner': u'hdfs',
+                 'path': '/datadirectory/regex_dir/test2file'
+                },
+                {'group': u'supergroup',
+                 'permission': 420,
+                 'file_type': 'f',
+                 'access_time': 1481122343796,
+                 'block_replication': 3,
+                 'modification_time': 1481122343862,
+                 'length': 12582912,
+                 'blocksize': 134217728,
+                 'owner': u'hdfs',
+                 'path': '/datadirectory/regex_dir/test3file'
+                },
+                {'group': u'supergroup',
+                 'permission': 420,
+                 'file_type': 'f',
+                 'access_time': 1481122343796,
+                 'block_replication': 3,
+                 'modification_time': 1481122343862,
+                 'length': 12582912,
+                 'blocksize': 134217728,
+                 'owner': u'hdfs',
+                 'path': '/datadirectory/regex_dir/copying_file_1.txt._COPYING_'
+                },
+                {'group': u'supergroup',
+                 'permission': 420,
+                 'file_type': 'f',
+                 'access_time': 1481122343796,
+                 'block_replication': 3,
+                 'modification_time': 1481122343862,
+                 'length': 12582912,
+                 'blocksize': 134217728,
+                 'owner': u'hdfs',
+                 'path': '/datadirectory/regex_dir/copying_file_3.txt.sftp'
+                }]
+
+    raise Exception(p)
+
+
+MockSnakeBiteClient = Mock(return_value=Mock(ls=mock_ls))
+MockHDFSHook = Mock(return_value=Mock(get_conn=MockSnakeBiteClient))
 
 
 class TimeoutTestSensor(BaseSensorOperator):
@@ -116,10 +255,8 @@ class HttpSensorTests(unittest.TestCase):
 
 class HdfsSensorTests(unittest.TestCase):
 
+    @unittest.skipIf(sys.version_info[0] == 3, "HdfsSensor won't work with python3")
     def setUp(self):
-        if sys.version_info[0] == 3:
-            raise unittest.SkipTest('HdfsSensor won\'t work with python3. No need to test anything here')
-        self.hook = FakeHDFSHook
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
 
@@ -136,7 +273,7 @@ class HdfsSensorTests(unittest.TestCase):
                           timeout=1,
                           retry_delay=timedelta(seconds=1),
                           poke_interval=1,
-                          hook=self.hook)
+                          hook=MockHDFSHook)
         task.execute(None)
 
         # Then
@@ -156,7 +293,7 @@ class HdfsSensorTests(unittest.TestCase):
                           file_size=20,
                           retry_delay=timedelta(seconds=1),
                           poke_interval=1,
-                          hook=self.hook)
+                          hook=MockHDFSHook)
 
         # When
         # Then
@@ -175,7 +312,7 @@ class HdfsSensorTests(unittest.TestCase):
                           timeout=1,
                           retry_delay=timedelta(seconds=1),
                           poke_interval=1,
-                          hook=self.hook)
+                          hook=MockHDFSHook)
 
         # When
         # Then
